@@ -1,15 +1,13 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "react-native";
-import { colors } from "../constants/theme";
+import { colors } from "../../constants/theme";
 
-export default function RootLayout() {
+export default function AuthLayout() {
   return (
     <>
     <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="dashboard" />
     </Stack>
     </>
   );
