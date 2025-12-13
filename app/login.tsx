@@ -1,15 +1,17 @@
 import { colors, fontSize, spacing } from "@/constants/theme";
-import { View, Text, KeyboardAvoidingView, ScrollView, StyleSheet, Platform, Alert } from "react-native";
+import { View, Text, KeyboardAvoidingView, ScrollView, StyleSheet, Alert } from "react-native";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import {useRouter} from "expo-router";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const {signIn} = useAuth();
+  const router = useRouter();
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -20,6 +22,7 @@ export default function Login() {
     try {
       setLoading(true);
       await signIn(email, password);
+      router.replace("/(auth)/dashboard");
     } catch (error) {
       console.log(error);
       Alert.alert("Erro", "Não foi possível realizar o login!");
