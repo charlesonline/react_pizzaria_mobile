@@ -1,7 +1,7 @@
 import api from "@/services/api";
-import { createContext, useContext,useState, useEffect } from "react";
-import {LoginResponse, User} from "../types/index";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createContext, useContext, useEffect, useState } from "react";
+import { LoginResponse, User } from "../types/index";
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -15,7 +15,7 @@ interface AuthContextData {
   signOut: () => Promise<void>;
 }
 
-export const AuthContext = createContext({} as AuthContextData);
+const AuthContext = createContext({} as AuthContextData);
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [signed, setSigned] = useState(false);
@@ -36,10 +36,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storagedUser = await AsyncStorage.getItem("@user:charlesonline");
       const storagedToken = await AsyncStorage.getItem("@token:charlesonline");
 
+      // console.log('📦 Loading storage data...');
       if (storagedUser && storagedToken) {
-        // api.defaults.headers.common["Authorization"] = `Bearer ${storagedToken}`;
         setUser(JSON.parse(storagedUser));
-        // setSigned(true);
+        setSigned(true);
+        // console.log('✅ User loaded from storage');
+      } else {
+        // console.log('❌ No user in storage');
       }
     } catch (error) {
       console.error("Error loading storage data:", error);
@@ -50,35 +53,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   async function signIn(email: string, password: string) {
     try {
+      // console.log('🔐 Attempting login...');
       const response = await api.post<LoginResponse>("/session", {
         email,
         password,
       });
 
+      // console.log('✅ Login successful');
       const { token, ...userData } = response.data;
 
       await AsyncStorage.setItem("@token:charlesonline", token);
       await AsyncStorage.setItem("@user:charlesonline", JSON.stringify(userData));
 
       setUser(userData);
+      setSigned(true);
+      // console.log('✅ User state updated');
 
     } catch (error:any) {
+      // console.error("❌ Sign-in error:", error.message);
       if(error.response?.data?.error){
-        console.error("Sign-in error:", error.response.data.error);
-        return;
+        // console.error("Server error:", error.response.data.error);
+        throw new Error(error.response.data.error);
       }
-
-      console.error("Error during sign-in:", error);
+      throw error;
     }
   }
 
   async function signOut() {
-    await AsyncStorage.clear();
+    // console.log('🚪 Logging out...');
+    await AsyncStorage.removeItem("@token:charlesonline");
+    await AsyncStorage.removeItem("@user:charlesonline");
     setUser(null);
+    setSigned(false);
+    // console.log('✅ Logout complete');
   }
 
   return (
-    <AuthContext.Provider value={{ signed: !!user, loading, signIn, user , signOut}}>
+    <AuthContext.Provider value={{ signed, loading, signIn, user , signOut}}>
       {children}
     </AuthContext.Provider>
   );
