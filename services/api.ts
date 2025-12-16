@@ -23,10 +23,10 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use((response) => {
   return response;
 }, (error) => {
-    //posso remover o token aqui se receber 401
-    if (error.response && error.response.status === 401) {
-      AsyncStorage.removeItem("@token:charlesonline");
-    }
+  //posso remover o token aqui se receber 401
+  if (error.response && error.response.status === 401) {
+    AsyncStorage.removeItem("@token:charlesonline");
+  }
   // Handle global errors here
   return Promise.reject(error);
 });
