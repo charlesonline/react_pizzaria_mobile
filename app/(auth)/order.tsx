@@ -1,12 +1,15 @@
-import { View,Text, ActivityIndicator, StyleSheet, Pressable, ScrollView } from "react-native";
-import {useLocalSearchParams, useRouter} from "expo-router";
-import { useState, useEffect } from 'react';
-import { Category, Product } from "@/types";
-import api from "@/services/api";
-import { borderRadius, colors, fontSize, spacing } from "@/constants/theme";
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button } from "@/components/Button";
+import OrderItem from "@/components/OrderItem";
+import { QuantityControl } from "@/components/QuantityControl";
 import { Select } from "@/components/Select";
+import { borderRadius, colors, fontSize, spacing } from "@/constants/theme";
+import api from "@/services/api";
+import { Category, Item, Product } from "@/types";
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Order(){
     const router = useRouter();
@@ -21,6 +24,9 @@ export default function Order(){
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+    const [quantity, setQuantity] = useState<number>(1);
+    const [loadingAddItem, setLoadingAddItem] = useState(false);
+    const [items, setItems] = useState<Item[]>([]);
 
     useEffect(() => {
         async function fetchData(){
@@ -60,6 +66,49 @@ export default function Order(){
             console.log("Erro ao carregar produtos:", error);
         } finally {
             setLoadingProducts(false);
+        }
+    }
+
+    async function handleAddItem(){
+        try{
+            setLoadingAddItem(true);
+
+            const response = await api.post<Item>('/order/add', {
+                order_id,
+                product_id: selectedProduct,
+                amount: quantity
+            });
+
+            const product = products.find(p => p.id === selectedProduct);
+            const itemWithProduct = {
+                ...response.data,
+                product: product!
+            };
+
+            setItems([...items, itemWithProduct]);
+
+            setSelectedCategory('');
+            setSelectedProduct('');
+            setQuantity(1);
+        }catch(error){
+            console.log("Erro ao adicionar item ao pedido:", error);
+        } finally {
+            setLoadingAddItem(false);
+        }
+    }
+
+    async function handleRemoveItem(itemId: string){
+        try{
+            await api.delete('/order/remove', {
+                params: {
+                    item_id: itemId,
+                    order_id
+                }
+            });
+
+            setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+        }catch(error){
+            console.log("Erro ao remover item do pedido:", error);
         }
     }
 
@@ -115,6 +164,43 @@ export default function Order(){
                         />
                     )
                 )}
+
+                {selectedProduct && (
+                    <View style={styles.quantitySection}>
+                        <Text style={styles.quantityText}>Quantidade</Text>
+                        <QuantityControl
+                            qtde={quantity}
+                            onIncrease={() => setQuantity(quantity + 1)}
+                            onDecrease={() => {
+                                if(quantity <= 1){
+                                    setQuantity(1);
+                                    return;
+                                }
+
+                                setQuantity(quantity - 1);
+                            }}
+                        />
+                    </View>
+                )}
+
+                {selectedProduct && (
+                    <Button 
+                        title="Adicionar"
+                        onPress={handleAddItem}
+                        variant="secondary"
+                    />
+                )}
+
+                {items.length > 0 && (
+                    <View style={styles.itemsSection}>
+                        <Text style={styles.itemsTitle}>Produtos</Text>
+
+                        {items.map(item => (
+                            <OrderItem key={item.id} item={item} onRemove={() => handleRemoveItem(item.id)} />
+                        ))}
+                    </View>
+                )}
+
             </ScrollView>
 
         </View>
@@ -158,5 +244,25 @@ const styles = StyleSheet.create({
         // flex:1,
         padding: spacing.lg,
         gap:14
+    },
+    quantitySection:{
+        flexDirection:'row',
+        alignItems:'center',
+        justifyContent:'space-between',
+        paddingVertical: spacing.md
+    },
+    quantityText:{
+        fontSize: fontSize.xl,
+        fontWeight:'500',
+        color: colors.primary
+    },
+    itemsSection:{
+        marginTop: spacing.xl,
+        gap: spacing.md
+    },
+    itemsTitle:{
+        color: colors.primary,
+        fontSize: fontSize.lg,
+        fontWeight: 'bold',
     }
 });
