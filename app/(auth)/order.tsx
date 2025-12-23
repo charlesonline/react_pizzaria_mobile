@@ -8,7 +8,7 @@ import { Category, Item, Product } from "@/types";
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Order(){
@@ -99,17 +99,35 @@ export default function Order(){
 
     async function handleRemoveItem(itemId: string){
         try{
-            await api.delete('/order/remove', {
+            await api.delete('/order/item', {
                 params: {
                     item_id: itemId,
                     order_id
                 }
             });
 
+            Alert.alert("Item removido com sucesso!");
+
             setItems(prevItems => prevItems.filter(item => item.id !== itemId));
         }catch(error){
             console.log("Erro ao remover item do pedido:", error);
         }
+    }
+
+    function handleAdvance(){
+
+        if(items.length === 0){
+            Alert.alert("Adicione ao menos um item ao pedido para avançar.");
+            return;
+        }
+
+        router.push({
+            pathname: '/(auth)/finish',
+            params: {
+                table,
+                order_id
+            }
+        });
     }
 
     if(loadingCategories){
@@ -133,7 +151,10 @@ export default function Order(){
                 </View>
             </View>
 
-            <ScrollView style={styles.scrollContent}>
+            <ScrollView
+                style={styles.scrollContent}
+                contentContainerStyle={{paddingBottom: insets.bottom + spacing.lg}} >
+
                 <Select
                     label="Categorias"
                     options={categories.map(category => ({
@@ -201,6 +222,15 @@ export default function Order(){
                     </View>
                 )}
 
+                {items.length > 0 && (
+                    <View style={styles.footer}>
+                        <Button 
+                            title="Avançar"
+                            onPress={handleAdvance}
+                        />
+                    </View>
+                )}
+
             </ScrollView>
 
         </View>
@@ -264,5 +294,9 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontSize: fontSize.lg,
         fontWeight: 'bold',
+    },
+    footer:{
+        marginTop: spacing.xl,
+        marginBottom: spacing.lg
     }
 });
